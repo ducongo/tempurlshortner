@@ -1,0 +1,25 @@
+{
+  "name": "adonthestreet_link_shortner",
+  "version": "1.0.0",
+  "description": "Link shortner",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ducongo/urlshortner.git"
+  },
+  "author": "Parfait Kingwaya",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ducongo/urlshortner/issues"
+  },
+  "homepage": "https://github.com/ducongo/urlshortner#readme",
+  "dependencies": {
+    "bases": "^0.2.1",
+    "express": "^4.16.3",
+    "mongoose": "^5.3.1",
+    "nodemon": "^1.18.4"
+  }
+}
