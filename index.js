@@ -8,6 +8,8 @@ var bases = require('bases');
 var config = require('./config');
 var model = require('./models/model');
 var urlShortner = require('./urlshortner');
+var urlVisits = require('./urlvisits');
+
 var counterSchema = new mongoose.Schema({
     _id: { type: String, required: true },
     seq: {type: Number, default: 0 }
@@ -16,6 +18,7 @@ var counterSchema = new mongoose.Schema({
 //mongod.exe -port 27998 -dbpath "C:\Users\parfa\OneDrive\Documents\aots link shortner\mongo\data\db"
 var Counter = model.Counter;//the model for the counter
 var Url = model.Url; //the model for the url
+var Visit = model.Visit;
 var urlCounter = new Counter({'_id': 'url_seq', 'seq': 1000});
 // console.log("***********************************************************************");
 // console.log("COUNTER: " + urlCounter.seq);
@@ -59,29 +62,60 @@ app.get('/api/shortened', function (req, res) {
   });
   res.send('Creating URL');
 });
-
+//https://stackfame.com/get-ip-address-node
 app.get('/:usr/:encoded_id', function (req, res){
-  var nick_name = req.params.usr;
+  var username = req.params.usr;
   console.log('user: ', user)
   var link_name = req.params.encoded_id;
   console.log('encoded_id: ', link_name)
+  var clientIP = req.header('x-forwarded-for') || req.connection.remoteAddress;
   Url.findOne({'nick_name' : nick_name, 'link_name': link_name}, (err, doc) => {
 
     if (err){
 
     }else{
       if(doc){
+        var visit_details = {
+          "ip":clientIP,
+          "url_id":doc.id,
+          "hostname":req.hostname,
+        };
         if(doc.original_url.startsWith("https://") || doc.original_url.startsWith("http://")){
             res.redirect(doc.original_url);
         }else{
             res.redirect("http://"+doc.original_url)
         };
+        urlVisits.newVisit(visit_details);
 
       }
     }
   });
 });
 
+//Route for Table 1
+app.get('api/urls/table1/:platform', function (req, res){
+
+});
+
+app.get('api/urls/table1/expanded/:id', function (req, res){
+
+});
+
+app.get('api/urls/table2/:id', function (req, res){
+
+});
+
+app.get('api/urls/table2/expanded/:id', function (req, res){
+
+});
+
+app.get('api/urls/graphs/all/', function (req, res){
+
+});
+
+app.get('api/urls/graphs/:id', function (req, res){
+
+});
 
 
 app.listen(5000, function () {
