@@ -19,6 +19,7 @@
   "dependencies": {
     "bases": "^0.2.1",
     "express": "^4.16.3",
+    "iplocation": "^6.0.2",
     "mongoose": "^5.3.1",
     "nodemon": "^1.18.4"
   }

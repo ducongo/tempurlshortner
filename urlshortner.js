@@ -42,7 +42,7 @@ function createShortenedURL(counter, longURL, callback){
     'custom_url': 'http://localhost:5000/dcg/' + bases.toBase64(counter),
     'platform': 'instagram',
     'visits_key': '0',
-    'nick_name': 'ducongo',
+    'username': 'dcg',
     'link_name': bases.toBase64(counter)
   });
 

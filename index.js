@@ -2,7 +2,7 @@ var express = require('express');
 var app = express();
 var path = require('path');
 const url = require('url');
-var bodyParser = require('body-parser');
+// var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var bases = require('bases');
 var config = require('./config');
@@ -10,14 +10,14 @@ var model = require('./models/model');
 var urlShortner = require('./urlshortner');
 var urlVisits = require('./urlvisits');
 
-var counterSchema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: {type: Number, default: 0 }
-});
+// var counterSchema = new mongoose.Schema({
+//     _id: { type: String, required: true },
+//     seq: {type: Number, default: 0 }
+// });
 
 //mongod.exe -port 27998 -dbpath "C:\Users\parfa\OneDrive\Documents\aots link shortner\mongo\data\db"
 var Counter = model.Counter;//the model for the counter
-var Url = model.Url; //the model for the url
+var Urlmodel = model.Url; //the model for the url
 var Visit = model.Visit;
 var urlCounter = new Counter({'_id': 'url_seq', 'seq': 1000});
 // console.log("***********************************************************************");
@@ -25,12 +25,12 @@ var urlCounter = new Counter({'_id': 'url_seq', 'seq': 1000});
 // console.log("***********************************************************************");
 mongoose.connect('mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name);
 
-urlCounter.save(function (err) {
-    if (err) return console.error(err);
-    console.log("-------------------------------------------------------------------");
-    console.log("SAVED COUNTER AGAIN");
-    console.log("------------------------------------------------------------------");
-});
+// urlCounter.save(function (err) {
+//     if (err) return console.error(err);
+//     console.log("-------------------------------------------------------------------");
+//     console.log("SAVED COUNTER AGAIN");
+//     console.log("------------------------------------------------------------------");
+// });
 
 
 var db = mongoose.connection;
@@ -65,15 +65,18 @@ app.get('/api/shortened', function (req, res) {
 //https://stackfame.com/get-ip-address-node
 app.get('/:usr/:encoded_id', function (req, res){
   var username = req.params.usr;
-  console.log('user: ', user)
+  console.log('user: ', username)
   var link_name = req.params.encoded_id;
   console.log('encoded_id: ', link_name)
-  var clientIP = req.header('x-forwarded-for') || req.connection.remoteAddress;
-  Url.findOne({'nick_name' : nick_name, 'link_name': link_name}, (err, doc) => {
+  //var clientIP = req.header('x-forwarded-for') || req.connection.remoteAddress;
+var clientIP = '5.5.5.5';
+  Urlmodel.findOne({'link_name': link_name}, (err, doc) => {
 
     if (err){
-
+      console.log("NO LINK FOUND _________________++++++++++++++++++++++++");
+      console.log(err);
     }else{
+      console.log("LINK FOUND: "+ doc);
       if(doc){
         var visit_details = {
           "ip":clientIP,
@@ -85,6 +88,7 @@ app.get('/:usr/:encoded_id', function (req, res){
         }else{
             res.redirect("http://"+doc.original_url)
         };
+
         urlVisits.newVisit(visit_details);
 
       }
@@ -93,8 +97,35 @@ app.get('/:usr/:encoded_id', function (req, res){
 });
 
 //Route for Table 1
-app.get('api/urls/table1/:platform', function (req, res){
+app.get('/api/urls/table1/:platform', function (req, res){
+  console.log("API API API");
+  res.send("API API API");
+  var arr = Urlmodel.aggregate([
+            {
+              $lookup: {
+                from: "visits",
+                localField: "custom_url",
+                foreignField: "url_id",
+                as: "url_visits"
+              }
+            }
+            ,
+            {
+              $unwind: "$url_visits"
+            }
+            ,
+            {
+              $group: {
+                _id: "$url_visits",
+              }
+            }
+          ])
+          .exec(function (err,result){
+              if(err) throw Error;
+              console.log(result);
+          });
 
+  //console.log(JSON.stringify(arr, null, 4));
 });
 
 app.get('api/urls/table1/expanded/:id', function (req, res){

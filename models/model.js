@@ -54,7 +54,7 @@ var _urlSchema = new mongoose.Schema({
 
 var _Counter = mongoose.model('counter', _counterSchema);
 var _Url = mongoose.model('url', _urlSchema);
-var _visit = mongoose.model('url', _visitSchema);
+var _visit = mongoose.model('visit', _visitSchema);
 
 module.exports = {
   Counter: _Counter,
