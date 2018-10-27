@@ -10,10 +10,10 @@ var model = require('./models/model');
 var urlShortner = require('./urlshortner');
 var urlVisits = require('./urlvisits');
 
-// var counterSchema = new mongoose.Schema({
-//     _id: { type: String, required: true },
-//     seq: {type: Number, default: 0 }
-// });
+ var counterSchema = new mongoose.Schema({
+    _id: { type: String, required: true },
+    seq: {type: Number, default: 0 }
+ });
 
 //mongod.exe -port 27998 -dbpath "C:\Users\parfa\OneDrive\Documents\aots link shortner\mongo\data\db"
 var Counter = model.Counter;//the model for the counter
@@ -25,12 +25,12 @@ var urlCounter = new Counter({'_id': 'url_seq', 'seq': 1000});
 // console.log("***********************************************************************");
 mongoose.connect('mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name);
 
-// urlCounter.save(function (err) {
-//     if (err) return console.error(err);
-//     console.log("-------------------------------------------------------------------");
-//     console.log("SAVED COUNTER AGAIN");
-//     console.log("------------------------------------------------------------------");
-// });
+urlCounter.save(function (err) {
+     if (err) return console.error(err);
+     console.log("-------------------------------------------------------------------");
+     console.log("SAVED COUNTER AGAIN");
+     console.log("------------------------------------------------------------------");
+ });
 
 
 var db = mongoose.connection;
@@ -102,29 +102,38 @@ app.get('/api/urls/table1/:platform', function (req, res){
   res.send("API API API");
   var arr = Urlmodel.aggregate([
             {
-              $lookup: {
+              $lookup: {  /* this will retrieve all visits sorted by urls */
                 from: "visits",
-                localField: "custom_url",
+                localField: "_id",
                 foreignField: "url_id",
                 as: "url_visits"
               }
             }
             ,
-            {
+            {		/* this will make each visit nested object its own element*/
               $unwind: "$url_visits"
             }
             ,
             {
-              $group: {
-                _id: "$url_visits",
+              $group: { /* this will group all unique visits by IP and hostname (other variables can also be added later), then sums the total views / unique visit as variable count */
+                _id: {visit: "$url_visits.ip",hostname: "$url_visits.hostname"},
+				
+				count: { $sum: 1 }
               }
             }
-          ])
+       ])
           .exec(function (err,result){
               if(err) throw Error;
               console.log(result);
+			  var total_visits = function(items, visit_count){
+					return items.reduce( function(a, b){
+						return a + b[visit_count];
+					}, 0);
+				};
+				console.log("Total visits: "+total_visits(result,'count'));
+				console.log("Unique visits: "+result.length);
           });
-
+		 
   //console.log(JSON.stringify(arr, null, 4));
 });
 

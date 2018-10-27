@@ -1,14 +1,14 @@
 var mongoose = require('mongoose');
-//var config = require('config');
-var config = {};
-config.db = {};
+var config = require('..\\config.js');
+//var config = {};
+/* config.db = {};
 config.webhost = 'http://localhost:27998/'
 
 config.db.host = 'localhost';
 config.db.name = 'shortned_urls';
-config.db.port = '27998';
+config.db.port = '27998'; */
 
-
+console.log(config);
 mongoose.connect('mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name);
 var _visitSchema = new mongoose.Schema({
   // _id: {type: text, index: true},
