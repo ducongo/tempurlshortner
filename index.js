@@ -137,6 +137,65 @@ app.get('/api/urls/table1/:platform', function (req, res){
   //console.log(JSON.stringify(arr, null, 4));
 });
 
+app.get('/api/urls/findinfo/', function (req, res){
+  console.log("API API API");
+  res.send("API API API");
+  var arr = Urlmodel.aggregate([
+            {
+              $lookup: {  /* this will retrieve all visits sorted by urls */
+                from: "visits",
+                localField: "_id",
+                foreignField: "url_id",
+                as: "url_visits"
+              }
+            }
+            ,
+            {		/* this will make each visit nested object its own element*/
+              $unwind: {
+                path: "$url_visits",
+              "preserveNullAndEmptyArrays": true
+            }
+            }
+            ,
+            {
+              $group: { /* this will group all unique visits by IP and hostname (other variables can also be added later), then sums the total views / unique visit as variable count */
+                _id: {url_id: "$_id",linkname: "$custom_url",link_title:"$link_title",original_url:"$original_url"},
+                  visit_count: { $sum: 1 },
+                  unique_visits: {$addToSet: "$url_visits.ip"},
+                  last_visited : { $last: "$url_visits.visit_time"}
+              }
+            },
+            {
+              $project: {
+              _id: 1,
+              link_title: 1,
+              original_url: 1,
+              visit_count: 1,
+              unique_visits: {$size: "$unique_visits"}
+            }
+          }
+
+       ])
+          .exec(function (err,result){
+              if(err){
+                console.log(err.stack);
+                throw Error;
+              }
+              console.log(result);
+			  var total_visits = function(items, visit_count){
+					return items.reduce( function(a, b){
+						return a + b[visit_count];
+					}, 0);
+				};
+				console.log("Total visits: "+total_visits(result,'count'));
+				console.log("Unique visits: "+result.length);
+          });
+		 
+  //console.log(JSON.stringify(arr, null, 4));
+});
+
+
+
 app.get('api/urls/table1/expanded/:id', function (req, res){
 
 });

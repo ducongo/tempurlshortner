@@ -7,13 +7,14 @@ config.webhost = 'http://localhost:27998/'
 config.db.host = 'localhost';
 config.db.name = 'shortned_urls';
 config.db.port = '27998'; */
+var ObjectId = mongoose.Schema.ObjectId;
 
 console.log(config);
 mongoose.connect('mongodb://' + config.db.host + ':' + config.db.port + '/' + config.db.name);
 var _visitSchema = new mongoose.Schema({
   // _id: {type: text, index: true},
   ip: String,
-  url_id: {type: String, index: true},
+  url_id: {type: ObjectId, index: true},
   region: String,
   region_code: String,
   city: String,
@@ -49,6 +50,7 @@ var _urlSchema = new mongoose.Schema({
   platform: String,
   username: String,
   link_name: String,
+  link_title: String
 });
 
 
