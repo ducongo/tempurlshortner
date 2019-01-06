@@ -1,10 +1,9 @@
 var express = require('express');
 var app = express();
-var path = require('path');
+//var path = require('path');
 const url = require('url');
 // var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
-var bases = require('bases');
 var config = require('./config');
 var model = require('./models/model');
 var urlShortner = require('./urlshortner');
@@ -117,7 +116,7 @@ app.get('/api/urls/table1/:platform', function (req, res){
             {
               $group: { /* this will group all unique visits by IP and hostname (other variables can also be added later), then sums the total views / unique visit as variable count */
                 _id: {visit: "$url_visits.ip",hostname: "$url_visits.hostname"},
-				
+
 				count: { $sum: 1 }
               }
             }
@@ -133,7 +132,7 @@ app.get('/api/urls/table1/:platform', function (req, res){
 				console.log("Total visits: "+total_visits(result,'count'));
 				console.log("Unique visits: "+result.length);
           });
-		 
+
   //console.log(JSON.stringify(arr, null, 4));
 });
 
@@ -190,7 +189,7 @@ app.get('/api/urls/findinfo/', function (req, res){
 				console.log("Total visits: "+total_visits(result,'count'));
 				console.log("Unique visits: "+result.length);
           });
-		 
+
   //console.log(JSON.stringify(arr, null, 4));
 });
 
@@ -311,12 +310,14 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
   //res.send("API API API");
   let url_id = req.params.id; //receives the url id
   let ObjectId = mongoose.Types.ObjectId(url_id);
-  let dayList = [];
+  let begh = parseInt(req.params.begh);
+  let endh = parseInt(req.params.endh);
+  let dayOfWeekNumberList = [];
+  let hourList = [];
   let totalVisitList = [];
-  let uniqueVisitList = [];
   console.log('got here')
   //need to use aggregate to format date
-  let arr = Visit.aggregate([
+  Visit.aggregate([
     {/*this limits the query by the start and end date
       start and end hour, and by the url id */
       $redact: {
@@ -325,8 +326,8 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
             $and: [
               { $gte: [ "$visit_time", new Date(req.params.start) ] },
               { $lte : [ "$visit_time", new Date(req.params.end) ] },
-              { $gte: [ { "$hour": "$visit_time" }, parseInt(req.params.begh) ] },
-              { $lte: [ { "$hour": "$visit_time" }, parseInt(req.params.endh) ] },
+              { $gte: [ { "$hour": "$visit_time" }, begh ] },
+              { $lte: [ { "$hour": "$visit_time" }, endh ] },
               { $eq: [ "$url_id", ObjectId ] }
             ]
           },
@@ -335,19 +336,21 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
         ]
       }
     },
-    {/*this projects the array of dates into a string, it also projects the ips for catching unique visits*/
+    {/*this projects the array of dates into a string*/
       $project: {
         "visit_time": 1,
-        visitedAtDay: { "$dateToString": { "format": "%Y-%m-%d", "date": "$visit_time" } },
+        visitedAtDay: { "$dateToString": {"format": "%w", "date": "$visit_time"}},
+        visitedAtHour: { "$dateToString": {"format": "%H", "date": "$visit_time"}},
         "ip": 1,
         "url_id": 1
       }
     },
-    {/*this groups the data together and sums up the visits per day*/
+    {/*this groups the data together and sums up the visits per unique Day of Week + Hour combo 
+      (makes counting visits on a certain day of the week at a specific hour simple*/
       $group: {
-        _id: { visit_time: "$visitedAtDay" },
-        unique_visits: { $addToSet: "ip" },
-        urls: { $addToSet: "url_id" },
+        _id: { visit_dow: "$visitedAtDay",
+               visit_hour: "$visitedAtHour"},
+        urls: { $addToSet: url_id },
         count: { $sum: 1 }
       }
     },
@@ -359,38 +362,80 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
   ]).exec(function (err, result) {
     if (err) throw Error;
     console.log(result);
-    dayList = [result.length + 1];
+    dayOfWeekNumberList = [result.length + 1];
+    hourList = [result.length + 1];
     totalVisitList = [result.length + 1];
-    uniqueVisitList = [result.length + 1];
 
-    for (var i = 1; i < result.length + 1; i++) {
-      dayList[i] = result[i - 1]._id.visit_time;
-      totalVisitList[i] = result[i - 1].count;
-      uniqueVisitList[i] = result[i - 1].unique_visits.length;
+    let hourRange = Array(endh + 1 - begh).fill().map((x, y) => y + begh);
+    hourRange.unshift('x');
+    console.log('hourRange: ', hourRange);
+
+    let sundayList = ["Sunday"].concat(Array(hourRange.length).fill(0));
+    let mondayList = ["Monday"].concat(Array(hourRange.length).fill(0));
+    let tuesdayList = ["Tuesday"].concat(Array(hourRange.length).fill(0));
+    let wednesdayList = ["Wednesday"].concat(Array(hourRange.length).fill(0));
+    let thursdayList = ["Thursday"].concat(Array(hourRange.length).fill(0));
+    let fridayList = ["Friday"].concat(Array(hourRange.length).fill(0));
+    let saturdayList = ["Saturday"].concat(Array(hourRange.length).fill(0));
+
+    for (var i = 0; i < result.length; i++) {
+      dayOfWeekNumberList[i] = parseInt(result[i]._id.visit_dow);
+      hourList[i] = parseInt(result[i]._id.visit_hour);
+      totalVisitList[i] = result[i].count;
     }
-    dayList[0] = 'x';
-    uniqueVisitList[0] = 'Unique Visits';
-    totalVisitList[0] = 'Total Visits';
 
-    console.log("listOfDays: ", dayList);
+    for(var i = 0; i < result.length; i++) {
+      console.log(hourRange.indexOf(hourList[i]));
+      console.log(totalVisitList[i]);
+      if(dayOfWeekNumberList[i] == 1) {
+        sundayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 2){
+        mondayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 3){
+        tuesdayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 4){
+        wednesdayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 5){
+        thursdayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 6){
+        fridayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      } else if(dayOfWeekNumberList[i] == 7){
+        saturdayList[hourRange.indexOf(hourList[i])] = totalVisitList[i];
+      }
+    }
+
+    console.log(sundayList);
+    console.log(mondayList);
+    console.log(tuesdayList);
+    console.log(wednesdayList);
+    console.log(thursdayList);
+    console.log(fridayList);
+    console.log(saturdayList);
+
+    console.log("listOfDayOfWeekNumbers: ", dayOfWeekNumberList);
+    console.log("listOfVisitedHours: ", hourList);
     console.log("listOfTotalVisits: ", totalVisitList);
-    console.log("listOfUniqueVisits: ", uniqueVisitList);
 
     /*give a json response of the graph data to be generated by c3.generateGraph(response)*/
     res.json({
       data: {
         x: 'x',
         columns: [
-          dayList,
-          uniqueVisitList,
-          totalVisitList
+          hourRange,
+          sundayList,
+          mondayList,
+          tuesdayList,
+          wednesdayList,
+          thursdayList,
+          fridayList,
+          saturdayList,
         ]
       },
       axis: {
         x: {
-          type: 'timeseries',
+          type: 'spline',
           tick: {
-            format: '%A'
+            format: 'd3.format(":00")'
           }
         }
       }
