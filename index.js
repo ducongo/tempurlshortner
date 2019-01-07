@@ -216,16 +216,16 @@ json data that can generate a graph by calling c3.generateGraph(response)*/
 app.get('/api/urls/graphs/:id/:start/:end', function (req, res){
   console.log("API API API");
   //res.send("API API API");
-  let start = new Date(req.params.start); //receives start date in %Y-%m-%d form
-  let end = new Date(req.params.end); //receives end date in %Y-%m-%d form
-  let url_id = req.params.id; //receives the url id
-  let ObjectId = mongoose.Types.ObjectId(url_id);
-  let dayList = [];
-  let totalVisitList = [];
-  let uniqueVisitList = [];
+  var start = new Date(req.params.start); //receives start date in %Y-%m-%d form
+  var end = new Date(req.params.end); //receives end date in %Y-%m-%d form
+  var url_id = req.params.id; //receives the url id
+  var ObjectId = mongoose.Types.ObjectId(url_id);
+  var dayList = [];
+  var totalVisitList = [];
+  var uniqueVisitList = [];
   console.log('got here')
   //need to use aggregate to format date
-  var arr = Visit.aggregate([
+  Visit.aggregate([
     {/*this limits the query by the start and end date, and by the url id */
       $match: {
         "visit_time": { $gte: start, $lte: end },
@@ -302,19 +302,18 @@ app.get('/api/urls/graphs/:id/:start/:end', function (req, res){
   });
 });
 
-/*This takes in a url id, start date an end date, a start hour, and end hour
-and spits out json data that can generate a graph by calling
-c3.generateGraph(response)*/
-app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
+/*This takes in a url id, start date and end date, and a start hour, and end hour
+and spits out json data that can generate a graph by calling c3.generateGraph(response)*/
+app.get('/api/urls/graphs/:id/:start/:end/:begH/:endH', function (req, res){
   console.log("API API API");
   //res.send("API API API");
-  let url_id = req.params.id; //receives the url id
-  let ObjectId = mongoose.Types.ObjectId(url_id);
-  let begh = parseInt(req.params.begh);
-  let endh = parseInt(req.params.endh);
-  let dayOfWeekNumberList = [];
-  let hourList = [];
-  let totalVisitList = [];
+  var urlId = req.params.id; //receives the url id
+  var urlObjectId = mongoose.Types.ObjectId(urlId);
+  var begH = parseInt(req.params.begH);
+  var endH = parseInt(req.params.endH);
+  var dayOfWeekNumberList = [];
+  var hourList = [];
+  var totalVisitList = [];
   console.log('got here')
   //need to use aggregate to format date
   Visit.aggregate([
@@ -326,9 +325,9 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
             $and: [
               { $gte: [ "$visit_time", new Date(req.params.start) ] },
               { $lte : [ "$visit_time", new Date(req.params.end) ] },
-              { $gte: [ { "$hour": "$visit_time" }, begh ] },
-              { $lte: [ { "$hour": "$visit_time" }, endh ] },
-              { $eq: [ "$url_id", ObjectId ] }
+              { $gte: [ { "$hour": "$visit_time" }, begH ] },
+              { $lte: [ { "$hour": "$visit_time" }, endH ] },
+              { $eq: [ "$url_id", urlObjectId ] }
             ]
           },
           "$$KEEP",
@@ -350,7 +349,7 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
       $group: {
         _id: { visit_dow: "$visitedAtDay",
                visit_hour: "$visitedAtHour"},
-        urls: { $addToSet: url_id },
+        urls: { $addToSet: urlId },
         count: { $sum: 1 }
       }
     },
@@ -366,17 +365,17 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
     hourList = [result.length + 1];
     totalVisitList = [result.length + 1];
 
-    let hourRange = Array(endh + 1 - begh).fill().map((x, y) => y + begh);
+    var hourRange = Array(endH + 1 - begH).fill().map((x, y) => y + begH);
     hourRange.unshift('x');
     console.log('hourRange: ', hourRange);
 
-    let sundayList = ["Sunday"].concat(Array(hourRange.length).fill(0));
-    let mondayList = ["Monday"].concat(Array(hourRange.length).fill(0));
-    let tuesdayList = ["Tuesday"].concat(Array(hourRange.length).fill(0));
-    let wednesdayList = ["Wednesday"].concat(Array(hourRange.length).fill(0));
-    let thursdayList = ["Thursday"].concat(Array(hourRange.length).fill(0));
-    let fridayList = ["Friday"].concat(Array(hourRange.length).fill(0));
-    let saturdayList = ["Saturday"].concat(Array(hourRange.length).fill(0));
+    var sundayList = ["Sunday"].concat(Array(hourRange.length).fill(0));
+    var mondayList = ["Monday"].concat(Array(hourRange.length).fill(0));
+    var tuesdayList = ["Tuesday"].concat(Array(hourRange.length).fill(0));
+    var wednesdayList = ["Wednesday"].concat(Array(hourRange.length).fill(0));
+    var thursdayList = ["Thursday"].concat(Array(hourRange.length).fill(0));
+    var fridayList = ["Friday"].concat(Array(hourRange.length).fill(0));
+    var saturdayList = ["Saturday"].concat(Array(hourRange.length).fill(0));
 
     for (var i = 0; i < result.length; i++) {
       dayOfWeekNumberList[i] = parseInt(result[i]._id.visit_dow);
@@ -430,16 +429,32 @@ app.get('/api/urls/graphs/:id/:start/:end/:begh/:endh', function (req, res){
           fridayList,
           saturdayList,
         ]
-      },
-      axis: {
-        x: {
-          type: 'spline',
-          tick: {
-            format: 'd3.format(":00")'
-          }
-        }
       }
     });
+  });
+});
+
+/* These would generate their respective pie charts with
+c3.generateGraph(response); when a specified url id is given*/
+app.get('/api/urls/graphs/:id', function (req, res) {
+  console.log('API API API');
+  var urlId = req.params.id; //receives the url id
+  var urlObjectId = mongoose.Types.ObjectId(urlId);
+  var countryVisitCounts = Visit.aggregate().exec(function(err, result) {
+    if(err) throw err;
+    console.log(result);
+  });
+  var cityVisitCounts = Visit.aggregate().exec(function(err, result) {
+    if(err) throw err;
+    console.log(result);
+  });
+  var platformVisitCounts = Visit.aggregate().exec(function(err, result) {
+    if(err) throw err;
+    console.log(result);
+  });
+
+  res.json({
+
   });
 });
 
